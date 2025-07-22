@@ -1,41 +1,75 @@
-import React, { useState } from "react";
-import css from "./App.module.css";
+import { useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { fetchNotes } from "../../services/noteService";
+import { useDebouncedCallback } from "use-debounce";
 import NoteList from "../NoteList/NoteList";
+import Paginaition from "../Pagination/Pagination";
 import SearchBox from "../SearchBox/SearchBox";
-import Pagination from "../Pagination/Pagination";
 import Modal from "../Modal/Modal";
 import NoteForm from "../NoteForm/NoteForm";
-import { useDebounce } from "../../hooks/useDebounce";
+import Loader from "../Loader/Loader";
+import ErrorMessage from "../ErrorMessage/ErrorMessage";
+import styles from "./App.module.css";
 
-const App: React.FC = () => {
+export default function App() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [modalIsOpen, setModalIsOpen] = useState(false);
 
-  const debouncedSearch = useDebounce(search);
+  const handleSearch = useDebouncedCallback((search: string) => {
+    setDebouncedSearch(search);
+  }, 300);
+
+  const handleSearchCange = (search: string) => {
+    setSearch(search);
+    setPage(1);
+    handleSearch(search);
+  };
+
+  const { data, isLoading, isError, isSuccess } = useQuery({
+    queryKey: ["notes", page, debouncedSearch],
+    queryFn: () =>
+      fetchNotes({
+        page,
+        perPage: 12,
+        search: debouncedSearch,
+      }),
+    placeholderData: keepPreviousData,
+  });
 
   return (
-    <div className={css.app}>
-      <header className={css.toolbar}>
-        <SearchBox value={search} onChange={setSearch} />
-        <Pagination
-          currentPage={page}
-          onPageChange={setPage}
-          search={debouncedSearch}
-        />
-        <button className={css.button} onClick={() => setIsModalOpen(true)}>
-          Create note +
+    <div className={styles.app}>
+      <header className={styles.toolbar}>
+        <SearchBox value={search} onChange={handleSearchCange} />
+        {data && data.total_pages > 1 && (
+          <Paginaition
+            currentPage={page}
+            totalPages={data.total_pages}
+            onPageChange={setPage}
+          />
+        )}
+        <button
+          className={styles.button}
+          type="button"
+          onClick={() => setModalIsOpen(true)}
+        >
+          Create +
         </button>
       </header>
-      <NoteList page={page} search={debouncedSearch} />
+      {isLoading && !data && <Loader />}
+      {isError && <ErrorMessage />}
+      {isSuccess && data?.data?.length > 0 ? (
+        <NoteList notes={data.data} />
+      ) : (
+        !isLoading && <p>No notes found</p>
+      )}
 
-      {isModalOpen && (
-        <Modal onClose={() => setIsModalOpen(false)}>
-          <NoteForm onCancel={() => setIsModalOpen(false)} />
+      {modalIsOpen && (
+        <Modal onClose={() => setModalIsOpen(false)}>
+          <NoteForm onClose={() => setModalIsOpen(false)} />
         </Modal>
       )}
     </div>
   );
-};
-
-export default App;
+}

@@ -1,40 +1,24 @@
-import React from "react";
 import ReactPaginate from "react-paginate";
-import { useQuery } from "@tanstack/react-query";
-import { fetchNotes } from "../../services/noteService";
-import css from "./Pagination.module.css";
+import css from "../Pagination/Pagination.module.css";
 
 interface PaginationProps {
   currentPage: number;
-  onPageChange: (page: number) => void;
-  search: string;
+  totalPages: number;
+  onPageChange: (selected: number) => void;
 }
 
-const Pagination: React.FC<PaginationProps> = ({
+export default function Pagination({
   currentPage,
+  totalPages,
   onPageChange,
-  search,
-}) => {
-  const { data } = useQuery({
-    queryKey: ["notes", currentPage, search],
-    queryFn: () => fetchNotes(currentPage, search),
-    staleTime: 5000,
-  });
-
-  if (!data || data.totalPages <= 1) return null;
-
+}: PaginationProps) {
   return (
     <ReactPaginate
-      className={css.pagination}
-      activeClassName={css.active}
-      breakLabel="..."
-      nextLabel=">"
-      previousLabel="<"
-      onPageChange={(event) => onPageChange(event.selected + 1)}
-      pageCount={data.totalPages}
+      pageCount={totalPages}
       forcePage={currentPage - 1}
+      onPageChange={(e) => onPageChange(e.selected + 1)}
+      containerClassName={css.pagination}
+      activeClassName={css.active}
     />
   );
-};
-
-export default Pagination;
+}

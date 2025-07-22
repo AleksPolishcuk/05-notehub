@@ -2,12 +2,9 @@ export interface Note {
   id: number;
   title: string;
   content: string;
-  tag?: string;
   createdAt: string;
   updatedAt: string;
+  tag: NoteTag;
 }
 
-export interface FetchNotesResponse {
-  notes: Note[];
-  totalPages: number;
-}
+export type NoteTag = "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
